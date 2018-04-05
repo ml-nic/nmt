@@ -601,6 +601,7 @@ def compute_perplexity(model, sess, name):
       break
 
   perplexity = utils.safe_exp(total_loss / total_predict_count)
-  utils.print_time("  eval %s: perplexity %.2f" % (name, perplexity),
+  loss = total_loss / total_predict_count
+  utils.print_time("  eval %s: perplexity %.2f loss %f" % (name, perplexity, loss),
                    start_time)
-  return perplexity
+  return perplexity, loss

@@ -122,8 +122,10 @@ def _accuracy(label_file, pred_file):
       count = 0.0
       match = 0.0
       for label in label_fh:
-        label = label.strip()
-        pred = pred_fh.readline().strip()
+        label = label.strip().lower()
+        label = re.sub(' +', ' ', label)
+        pred = pred_fh.readline().strip().lower()
+        pred = re.sub(' +', ' ', pred)
         if label == pred:
           match += 1
         count += 1

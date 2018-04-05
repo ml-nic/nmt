@@ -160,7 +160,7 @@ class BaseModel(object):
       # Summary
       self.train_summary = tf.summary.merge([
           tf.summary.scalar("lr", self.learning_rate),
-          tf.summary.scalar("train_loss", self.train_loss),
+                                                tf.summary.scalar("train_loss", self.train_loss)
       ] + grad_norm_summary)
 
     if self.mode == tf.contrib.learn.ModeKeys.INFER:

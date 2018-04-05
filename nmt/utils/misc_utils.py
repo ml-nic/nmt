@@ -64,7 +64,11 @@ def print_out(s, f=None, new_line=True):
   out_s = s.encode("utf-8")
   if not isinstance(out_s, str):
     out_s = out_s.decode("utf-8")
-  print(out_s, end="", file=sys.stdout)
+  try:
+    print(out_s, end="", file=sys.stdout)
+  except UnicodeEncodeError as e:
+    print(s.encode("utf-8"), end="", file=sys.stdout)
+
 
   if new_line:
     sys.stdout.write("\n")
