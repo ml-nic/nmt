@@ -43,7 +43,8 @@ class AttentionModel(model.Model):
                target_vocab_table,
                reverse_target_vocab_table=None,
                scope=None,
-               extra_args=None):
+               extra_args=None,
+               sent_feat_vocab_table=None):
     # Set attention_mechanism_fn
     if extra_args and extra_args.attention_mechanism_fn:
       self.attention_mechanism_fn = extra_args.attention_mechanism_fn
@@ -58,7 +59,8 @@ class AttentionModel(model.Model):
         target_vocab_table=target_vocab_table,
         reverse_target_vocab_table=reverse_target_vocab_table,
         scope=scope,
-        extra_args=extra_args)
+        extra_args=extra_args,
+        sent_feat_vocab_table=sent_feat_vocab_table)
 
     if self.mode == tf.contrib.learn.ModeKeys.INFER:
       self.infer_summary = self._get_infer_summary(hparams)
