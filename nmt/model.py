@@ -582,14 +582,7 @@ class Model(BaseModel):
             if hparams.sent_feature_file:
                 encoder_sent_feat_inp = tf.nn.embedding_lookup(
                     self.sent_feat_embedding_encoder, sent_features)
-                print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-                print(encoder_emb_inp)
-                print(tf.shape(encoder_emb_inp))
-                print(encoder_sent_feat_inp)
-                print(tf.shape(encoder_sent_feat_inp))
                 concated_encoder_emb_inp = tf.concat([encoder_emb_inp, encoder_sent_feat_inp], 0)
-                print(concated_encoder_emb_inp)
-                print(tf.shape(concated_encoder_emb_inp))
             else:
                 concated_encoder_emb_inp = encoder_emb_inp
 
