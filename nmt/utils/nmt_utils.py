@@ -79,14 +79,19 @@ def decode_and_evaluate(name,
   evaluation_scores = {}
   if ref_file and tf.gfile.Exists(trans_file):
     for metric in metrics:
-      score = evaluation_utils.evaluate(
+        score, len_questions, error_counter = evaluation_utils.evaluate(
           ref_file,
           trans_file,
           metric,
           subword_option=subword_option,
           question_file=inference_input_file)
       evaluation_scores[metric] = score
-      utils.print_out("  %s %s: %.1f" % (metric, name, score))
+        if len_questions:
+            utils.print_out("  %s: %.1f, Successful executed %d of %d queries" % (
+                metric, score, len_questions, error_counter))
+            evaluation_scores["syntax_error_counter"] = error_counter
+        else:
+            utils.print_out("  %s %s: %.1f" % (metric, name, score))
 
   return evaluation_scores
 

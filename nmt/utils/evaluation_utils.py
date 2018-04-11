@@ -31,11 +31,15 @@ import utils as our_utils
 import Preprocessing.generator_utils as generator_utils
 
 __all__ = ["evaluate"]
+model_id = ""
+first_fetch = True
 
 
 def evaluate(ref_file, trans_file, metric, subword_option=None, question_file=None):
     """Pick a metric and evaluate depending on task."""
     # BLEU scores for translation task
+    len_questions = None
+    error_counter = None
     if metric.lower() == "bleu":
         evaluation_score = _bleu(ref_file, trans_file,
                                  subword_option=subword_option)
@@ -48,13 +52,13 @@ def evaluate(ref_file, trans_file, metric, subword_option=None, question_file=No
     elif metric.lower() == "old_accuracy":
         evaluation_score = old_accuracy(ref_file, trans_file)
     elif metric.lower() == "result_set_accuracy":
-        evaluation_score = _result_set_accuracy(question_file, ref_file, trans_file)
+        evaluation_score, len_questions, error_counter = _result_set_accuracy(question_file, ref_file, trans_file)
     elif metric.lower() == "word_accuracy":
         evaluation_score = _word_accuracy(ref_file, trans_file)
     else:
         raise ValueError("Unknown metric %s" % metric)
 
-    return evaluation_score
+    return evaluation_score, len_questions, error_counter
 
 
 def _clean(sentence, subword_option):
@@ -149,12 +153,17 @@ def _result_set_accuracy(question_file, label_file, pred_file):
     Compute accuracy, each line contains a label.
     Overwritten to handle accuracy of SPARQL Queries, see func: old_accuracy, for the old version
     """
-    label_json_file = "tmp/lable.json"
-    pred_json_file = "tmp/pred.json"
+    global first_fetch
+    label_json_file = "tmp/label_{}.json".format(model_id)
+    pred_json_file = "tmp/pred_{}.json".format(model_id)
     count = 0
     match = 0
-    our_utils.fetch_results(question_file, label_file, label_json_file)
-    our_utils.fetch_results(question_file, pred_file, pred_json_file)
+    if first_fetch is True:
+        print("Only fetch data for labels one time...")
+        _, _ = our_utils.fetch_results(question_file, label_file, label_json_file)
+        print("Fetched data for labels")
+        first_fetch = False
+    len_questions, error_counter = our_utils.fetch_results(question_file, pred_file, pred_json_file)
     ground_truth = json.load(open(label_json_file))
     generated = json.load(open(pred_json_file))
     for gen_question in generated["questions"]:
@@ -166,7 +175,7 @@ def _result_set_accuracy(question_file, label_file, pred_file):
                 if same_answer is True:
                     match += 1
                 count += 1
-    return 100 * match / count
+    return 100 * match / count, len_questions, error_counter
 
 
 def old_accuracy(label_file, pred_file):

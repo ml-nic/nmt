@@ -14,8 +14,7 @@
   "metrics": [
     "accuracy",
     "bleu",
-    "old_accuracy",
-    "result_set_accuracy"
+    "old_accuracy"
   ],
   "num_buckets": 5,
   "num_layers": 2,

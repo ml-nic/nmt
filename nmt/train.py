@@ -311,11 +311,11 @@ def train(hparams, scope=None, target_session=""):
     num_train_steps = hparams.num_train_steps
     steps_per_stats = hparams.steps_per_stats
     steps_per_external_eval = hparams.steps_per_external_eval
-    steps_per_eval = 10 * steps_per_stats
+    steps_per_eval = steps_per_stats
     avg_ckpts = hparams.avg_ckpts
 
     if not steps_per_external_eval:
-        steps_per_external_eval = 5 * steps_per_eval
+        steps_per_external_eval = steps_per_eval
 
     if not hparams.attention:
         model_creator = nmt_model.Model
@@ -395,8 +395,8 @@ def train(hparams, scope=None, target_session=""):
             # Finished going through the training dataset.  Go to next epoch.
             hparams.epoch_step = 0
             utils.print_out(
-                "# Finished an epoch, step %d. Perform external evaluation" %
-                global_step)
+                "# Finished an epoch, step {}, epoch {}. Perform external evaluation".format(
+                    global_step, global_step / hparams.batch_size))
             run_sample_decode(infer_model, infer_sess, model_dir, hparams,
                               summary_writer, sample_src_data, sample_tgt_data, sample_sent_feat_data)
             run_external_eval(infer_model, infer_sess, model_dir, hparams,
@@ -429,7 +429,7 @@ def train(hparams, scope=None, target_session=""):
             # Reset statistics
             stats = init_stats()
 
-        if global_step - last_eval_step >= steps_per_eval:
+        if global_step - last_eval_step >= steps_per_eval and global_step > 200:
             last_eval_step = global_step
             utils.print_out("# Save eval, global step %d" % global_step)
             utils.add_summary(summary_writer, global_step, "train_ppl",
@@ -597,6 +597,12 @@ def _external_eval(model, global_step, sess, hparams, iterator,
     sess.run(iterator.initializer, feed_dict=iterator_feed_dict)
 
     output = os.path.join(out_dir, "output_%s" % label)
+    question_file = ""
+    try:
+        question_file = hparams.inference_input_file
+    except AttributeError as e:
+        question_file = "%s.%s" % (hparams.dev_prefix, hparams.src)
+
     scores = nmt_utils.decode_and_evaluate(
         label,
         model,
@@ -607,7 +613,7 @@ def _external_eval(model, global_step, sess, hparams, iterator,
         subword_option=hparams.subword_option,
         beam_width=hparams.beam_width,
         tgt_eos=hparams.eos,
-        inference_input_file=hparams.inference_input_file,
+        inference_input_file=question_file,
         decode=decode)
     # Save on best metrics
     if decode:

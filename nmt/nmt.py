@@ -233,7 +233,7 @@ def add_arguments(parser):
     parser.add_argument("--override_loaded_hparams", type="bool", nargs="?",
                         const=True, default=False,
                         help="Override loaded hparams with values specified")
-    parser.add_argument("--num_keep_ckpts", type=int, default=5,
+    parser.add_argument("--num_keep_ckpts", type=int, default=10000,
                         help="Max number of checkpoints to keep.")
     parser.add_argument("--avg_ckpts", type="bool", nargs="?",
                         const=True, default=False, help=("""\
@@ -298,10 +298,13 @@ def add_arguments(parser):
                         help="Max length of sent feat sequences during inference.")
     parser.add_argument("--sent_feat_embed_file", type=str, default=None,
                         help="File which contains the pretrained embeddings for the sentence level features.")
+    parser.add_argument("--model_id", type=str, default=None,
+                        help="id of the model, must be distinct")
 
 
 def create_hparams(flags):
     """Create training hparams."""
+    evaluation_utils.model_id = flags.model_id
     return tf.contrib.training.HParams(
         # Data
         src=flags.src,
@@ -386,6 +389,7 @@ def create_hparams(flags):
         sent_feat_max_len=flags.sent_feat_max_len,
         sent_feat_max_len_infer=flags.sent_feat_max_len_infer,
         sent_feat_embed_file=flags.sent_feat_embed_file,
+        model_id=flags.model_id
     )
 
 
@@ -615,13 +619,17 @@ def run_main(flags, default_hparams, train_fn, inference_fn, target_session=""):
             met.append("old_accuracy")
             met.append("result_set_accuracy")
             for metric in met:
-                score = evaluation_utils.evaluate(
+                score, len_questions, error_counter = evaluation_utils.evaluate(
                     ref_file,
                     trans_file,
                     metric,
                     hparams.subword_option,
                     question_file=flags.inference_input_file)
-                utils.print_out("  %s: %.1f" % (metric, score))
+                if len_questions:
+                    utils.print_out("  %s: %.1f, Successful executed %d of %d queries" % (
+                        metric, score, len_questions, error_counter))
+                else:
+                    utils.print_out("  %s: %.1f" % (metric, score))
     else:
         # Train
         train_fn(hparams, target_session=target_session)
