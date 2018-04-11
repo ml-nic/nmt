@@ -14,7 +14,8 @@
   "metrics": [
     "accuracy",
     "bleu",
-    "old_accuracy"
+    "old_accuracy",
+    "result_set_accuracy"
   ],
   "num_buckets": 5,
   "num_layers": 2,
@@ -29,7 +30,7 @@
   "src_max_len": 50,
   "src_max_len_infer": null,
   "steps_per_external_eval": null,
-  "steps_per_stats": 10,
+  "steps_per_stats": 35,
   "tgt_max_len": 50,
   "tgt_max_len_infer": null,
   "time_major": true,

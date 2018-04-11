@@ -18,6 +18,7 @@ import codecs
 import os
 import re
 import subprocess
+import json
 
 import tensorflow as tf
 
@@ -32,7 +33,7 @@ import Preprocessing.generator_utils as generator_utils
 __all__ = ["evaluate"]
 
 
-def evaluate(ref_file, trans_file, metric, subword_option=None):
+def evaluate(ref_file, trans_file, metric, subword_option=None, question_file=None):
     """Pick a metric and evaluate depending on task."""
     # BLEU scores for translation task
     if metric.lower() == "bleu":
@@ -46,6 +47,8 @@ def evaluate(ref_file, trans_file, metric, subword_option=None):
         evaluation_score = _accuracy(ref_file, trans_file)
     elif metric.lower() == "old_accuracy":
         evaluation_score = old_accuracy(ref_file, trans_file)
+    elif metric.lower() == "result_set_accuracy":
+        evaluation_score = _result_set_accuracy(question_file, ref_file, trans_file)
     elif metric.lower() == "word_accuracy":
         evaluation_score = _word_accuracy(ref_file, trans_file)
     else:
@@ -125,7 +128,6 @@ def _accuracy(label_file, pred_file):
     Compute accuracy, each line contains a label.
     Overwritten to handle accuracy of SPARQL Queries, see func: old_accuracy, for the old version
     """
-
     with codecs.getreader("utf-8")(tf.gfile.GFile(label_file, "rb")) as label_fh:
         with codecs.getreader("utf-8")(tf.gfile.GFile(pred_file, "rb")) as pred_fh:
             count = 0.0
@@ -138,6 +140,31 @@ def _accuracy(label_file, pred_file):
                 label = our_utils.rep(generator_utils.decode(label))
                 if our_utils.sparql_compare(label, pred):
                     match += 1.0
+                count += 1
+    return 100 * match / count
+
+
+def _result_set_accuracy(question_file, label_file, pred_file):
+    """
+    Compute accuracy, each line contains a label.
+    Overwritten to handle accuracy of SPARQL Queries, see func: old_accuracy, for the old version
+    """
+    label_json_file = "tmp/lable.json"
+    pred_json_file = "tmp/pred.json"
+    count = 0
+    match = 0
+    our_utils.fetch_results(question_file, label_file, label_json_file)
+    our_utils.fetch_results(question_file, pred_file, pred_json_file)
+    ground_truth = json.load(open(label_json_file))
+    generated = json.load(open(pred_json_file))
+    for gen_question in generated["questions"]:
+        gen_nl_question = gen_question["question"][0]["string"]
+        for gt_question in ground_truth["questions"]:
+            gt_nl_question = gt_question["question"][0]["string"]
+            if our_utils.string_compare(gen_nl_question, gt_nl_question):
+                same_answer = our_utils.compare_answers(gt_question["answers"], gen_question["answers"])
+                if same_answer is True:
+                    match += 1
                 count += 1
     return 100 * match / count
 

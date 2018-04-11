@@ -611,12 +611,16 @@ def run_main(flags, default_hparams, train_fn, inference_fn, target_session=""):
         # Evaluation
         ref_file = flags.inference_ref_file
         if ref_file and tf.gfile.Exists(trans_file):
-            for metric in hparams.metrics:
+            met = hparams.metrics
+            met.append("old_accuracy")
+            met.append("result_set_accuracy")
+            for metric in met:
                 score = evaluation_utils.evaluate(
                     ref_file,
                     trans_file,
                     metric,
-                    hparams.subword_option)
+                    hparams.subword_option,
+                    question_file=flags.inference_input_file)
                 utils.print_out("  %s: %.1f" % (metric, score))
     else:
         # Train

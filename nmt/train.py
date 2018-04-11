@@ -607,6 +607,7 @@ def _external_eval(model, global_step, sess, hparams, iterator,
         subword_option=hparams.subword_option,
         beam_width=hparams.beam_width,
         tgt_eos=hparams.eos,
+        inference_input_file=hparams.inference_input_file,
         decode=decode)
     # Save on best metrics
     if decode:

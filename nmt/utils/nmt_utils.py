@@ -36,6 +36,7 @@ def decode_and_evaluate(name,
                         subword_option,
                         beam_width,
                         tgt_eos,
+                        inference_input_file,
                         num_translations_per_input=1,
                         decode=True):
   """Decode a test set and compute a score according to the evaluation task."""
@@ -82,7 +83,8 @@ def decode_and_evaluate(name,
           ref_file,
           trans_file,
           metric,
-          subword_option=subword_option)
+          subword_option=subword_option,
+          question_file=inference_input_file)
       evaluation_scores[metric] = score
       utils.print_out("  %s %s: %.1f" % (metric, name, score))
 
