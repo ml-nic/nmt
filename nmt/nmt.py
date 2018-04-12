@@ -627,7 +627,7 @@ def run_main(flags, default_hparams, train_fn, inference_fn, target_session=""):
                     question_file=flags.inference_input_file)
                 if len_questions:
                     utils.print_out("  %s: %.1f, Successful executed %d of %d queries" % (
-                        metric, score, len_questions, error_counter))
+                        metric, score, len_questions - error_counter, len_questions))
                 else:
                     utils.print_out("  %s: %.1f" % (metric, score))
     else:

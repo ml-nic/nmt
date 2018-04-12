@@ -88,7 +88,7 @@ def decode_and_evaluate(name,
             evaluation_scores[metric] = score
             if len_questions:
                 utils.print_out("  %s: %.1f, Successful executed %d of %d queries" % (
-                    metric, score, len_questions, error_counter))
+                    metric, score, len_questions - error_counter, len_questions))
                 evaluation_scores["syntax_error_counter"] = error_counter
             else:
                 utils.print_out("  %s %s: %.1f" % (metric, name, score))
