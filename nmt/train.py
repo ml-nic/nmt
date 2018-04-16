@@ -627,11 +627,14 @@ def _external_eval(model, global_step, sess, hparams, iterator,
                               scores[metric])
             # metric: larger is better
             if save_on_best and scores[metric] > getattr(hparams, best_metric_label):
-                setattr(hparams, best_metric_label, scores[metric])
-                model.saver.save(
-                    sess,
-                    os.path.join(
-                        getattr(hparams, best_metric_label + "_dir"), "translate.ckpt"),
-                    global_step=model.global_step)
+                try:
+                    setattr(hparams, best_metric_label, scores[metric])
+                    model.saver.save(
+                        sess,
+                        os.path.join(
+                            getattr(hparams, best_metric_label + "_dir"), "translate.ckpt"),
+                        global_step=model.global_step)
+                except KeyError as e:
+                    pass
         utils.save_hparams(out_dir, hparams)
     return scores
