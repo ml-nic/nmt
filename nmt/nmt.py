@@ -616,8 +616,10 @@ def run_main(flags, default_hparams, train_fn, inference_fn, target_session=""):
         ref_file = flags.inference_ref_file
         if ref_file and tf.gfile.Exists(trans_file):
             met = hparams.metrics
-            met.append("old_accuracy")
-            met.append("result_set_accuracy")
+            if "old_accuracy" not in met:
+                met.append("old_accuracy")
+            if "result_set_accuracy" not in met:
+                met.append("result_set_accuracy")
             for metric in met:
                 score, len_questions, error_counter = evaluation_utils.evaluate(
                     ref_file,

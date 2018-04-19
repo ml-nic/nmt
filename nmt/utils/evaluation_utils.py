@@ -52,7 +52,20 @@ def evaluate(ref_file, trans_file, metric, subword_option=None, question_file=No
     elif metric.lower() == "old_accuracy":
         evaluation_score = old_accuracy(ref_file, trans_file)
     elif metric.lower() == "result_set_accuracy":
-        evaluation_score, len_questions, error_counter = _result_set_accuracy(question_file, ref_file, trans_file)
+        tmp = open(ref_file, encoding="utf8").readlines()
+        var_queries = False
+        for s in tmp[0:10]:
+            if "<var0>" in s:
+                var_queries = True
+        if var_queries:
+            label_uri_file = "../../Data/SQA2018/dev.tok.sparql"
+            evaluation_score, len_questions, error_counter = _result_set_accuracy(question_file, label_uri_file,
+                                                                                  label_var_file=ref_file,
+                                                                                  pred_var_file=trans_file)
+            # label_uri_file, pred_uri_file=None, label_var_file=None, pred_var_file=None
+        else:
+            evaluation_score, len_questions, error_counter = _result_set_accuracy(question_file, ref_file, trans_file)
+
     elif metric.lower() == "word_accuracy":
         evaluation_score = _word_accuracy(ref_file, trans_file)
     else:
@@ -148,7 +161,8 @@ def _accuracy(label_file, pred_file):
     return 100 * match / count
 
 
-def _result_set_accuracy(question_file, label_file, pred_file):
+# def _result_set_accuracy(question_file, label_file, pred_file):
+def _result_set_accuracy(question_file, label_uri_file, pred_uri_file=None, label_var_file=None, pred_var_file=None):
     """
     Compute accuracy, each line contains a label.
     Overwritten to handle accuracy of SPARQL Queries, see func: old_accuracy, for the old version
@@ -158,12 +172,28 @@ def _result_set_accuracy(question_file, label_file, pred_file):
     pred_json_file = "tmp/pred_{}.json".format(model_id)
     count = 0
     match = 0
+    if label_var_file is None:
+        if pred_var_file is not None or pred_uri_file is None:
+            raise Exception
+    if pred_var_file is None:
+        if label_var_file is not None or pred_uri_file is None:
+            raise Exception
+    if pred_uri_file is None:
+        new_pred_uri_file = "tmp/pred_uri_{}.json".format(model_id)
+        our_utils.file_wrap_replace_var_with_correct_uri(label_var_file, label_uri_file, pred_var_file,
+                                                         new_pred_uri_file)
+        pred_uri_file = new_pred_uri_file
+
+    # lookup:
+    # question_file, label_uri_file, pred_uri_file, label_var_file, pred_var_file
+
     if first_fetch is True:
         print("Only fetch data for labels one time...")
-        _, _ = our_utils.fetch_results(question_file, label_file, label_json_file)
+        _, _ = our_utils.fetch_results(question_file, label_uri_file, label_json_file, var_sparql_file=label_var_file)
         print("Fetched data for labels")
         first_fetch = False
-    len_questions, error_counter = our_utils.fetch_results(question_file, pred_file, pred_json_file)
+    len_questions, error_counter = our_utils.fetch_results(question_file, pred_uri_file, pred_json_file,
+                                                           var_sparql_file=pred_var_file)
     ground_truth = json.load(open(label_json_file))
     generated = json.load(open(pred_json_file))
     for gen_question in generated["questions"]:
