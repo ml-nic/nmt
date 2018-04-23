@@ -287,7 +287,7 @@ def add_arguments(parser):
                         help="number of intra_op_parallelism_threads")
 
     # Our arguments:
-    parser.add_argument("--sent_feature_file", type=str, default=None,
+    parser.add_argument("--sent_feature_file_path", type=str, default=None,
                         help="File which contains the sentence level features.")
     parser.add_argument("--sent_feat_vocab_file", type=str, default=None,
                         help="File which contains the vocab of the sentence level features.")
@@ -385,7 +385,7 @@ def create_hparams(flags):
         num_inter_threads=flags.num_inter_threads,
 
         # Ours:
-        sent_feature_file=flags.sent_feature_file,
+        sent_feature_file_path=flags.sent_feature_file_path,
         sent_feat_max_len=flags.sent_feat_max_len,
         sent_feat_max_len_infer=flags.sent_feat_max_len_infer,
         sent_feat_embed_file=flags.sent_feat_embed_file,
@@ -482,7 +482,7 @@ def extend_hparams(hparams):
     hparams.add_hparam("tgt_vocab_file", tgt_vocab_file)
 
     # Sentence Feature Vocab File
-    if hparams.sent_feature_file:
+    if hparams.sent_feature_file_path:
         sent_feat_vocab_file = hparams.vocab_prefix + "." + "sent_feature"
         sent_feat_vocab_size, sent_feat_vocab_file = vocab_utils.check_vocab(
             sent_feat_vocab_file,

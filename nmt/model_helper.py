@@ -71,8 +71,8 @@ def create_train_model(
     tgt_file = "%s.%s" % (hparams.train_prefix, hparams.tgt)
     sent_feat_file = None
     sent_feat_vocab_file = None
-    if hparams.sent_feature_file:
-        sent_feat_file = hparams.sent_feature_file
+    if hparams.sent_feature_file_path:
+        sent_feat_file = "%s/dev.sent_feature" % (hparams.sent_feature_file_path)
         sent_feat_vocab_file = hparams.sent_feat_vocab_file
     src_vocab_file = hparams.src_vocab_file
     tgt_vocab_file = hparams.tgt_vocab_file
@@ -85,7 +85,7 @@ def create_train_model(
 
         src_dataset = tf.data.TextLineDataset(src_file)
         tgt_dataset = tf.data.TextLineDataset(tgt_file)
-        if hparams.sent_feature_file:
+        if hparams.sent_feature_file_path:
             sent_feat_dataset = tf.contrib.data.TextLineDataset(sent_feat_file)
         else:
             sent_feat_dataset = None
@@ -144,7 +144,7 @@ def create_eval_model(model_creator, hparams, scope=None, extra_args=None):
     """Create train graph, model, src/tgt file holders, and iterator."""
     src_vocab_file = hparams.src_vocab_file
     tgt_vocab_file = hparams.tgt_vocab_file
-    if hparams.sent_feature_file:
+    if hparams.sent_feature_file_path:
         sent_feat_vocab_file = hparams.sent_feat_vocab_file
     else:
         sent_feat_vocab_file = None
@@ -159,7 +159,7 @@ def create_eval_model(model_creator, hparams, scope=None, extra_args=None):
         src_dataset = tf.data.TextLineDataset(src_file_placeholder)
         tgt_dataset = tf.data.TextLineDataset(tgt_file_placeholder)
         sent_feat_file_placeholder = None
-        if hparams.sent_feature_file:
+        if hparams.sent_feature_file_path:
             sent_feat_file_placeholder = tf.placeholder(shape=(), dtype=tf.string)
             sent_feat_dataset = tf.contrib.data.TextLineDataset(sent_feat_file_placeholder)
         else:
@@ -209,7 +209,7 @@ def create_infer_model(model_creator, hparams, scope=None, extra_args=None):
     graph = tf.Graph()
     src_vocab_file = hparams.src_vocab_file
     tgt_vocab_file = hparams.tgt_vocab_file
-    if hparams.sent_feature_file:
+    if hparams.sent_feature_file_path:
         sent_feat_vocab_file = hparams.sent_feat_vocab_file
     else:
         sent_feat_vocab_file = None
@@ -224,7 +224,7 @@ def create_infer_model(model_creator, hparams, scope=None, extra_args=None):
         batch_size_placeholder = tf.placeholder(shape=[], dtype=tf.int64)
         sent_feat_dataset = None
         sent_feat_placeholder = None
-        if hparams.sent_feature_file:
+        if hparams.sent_feature_file_path:
             sent_feat_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
             sent_feat_dataset = tf.contrib.data.Dataset.from_tensor_slices(
                 sent_feat_placeholder)

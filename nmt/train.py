@@ -66,8 +66,8 @@ def run_internal_eval(
     dev_src_file = "%s.%s" % (hparams.dev_prefix, hparams.src)
     dev_tgt_file = "%s.%s" % (hparams.dev_prefix, hparams.tgt)
     dev_sent_feat_file = ""
-    if hparams.sent_feature_file:
-        dev_sent_feat_file = hparams.sent_feature_file
+    if hparams.sent_feature_file_path:
+        dev_sent_feat_file = "%s/dev.sent_feature" % (hparams.sent_feature_file_path)
         dev_eval_iterator_feed_dict = {
             eval_model.src_file_placeholder: dev_src_file,
             eval_model.tgt_file_placeholder: dev_tgt_file,
@@ -115,8 +115,9 @@ def run_external_eval(infer_model, infer_sess, model_dir, hparams,
     dev_src_file = "%s.%s" % (hparams.dev_prefix, hparams.src)
     dev_tgt_file = "%s.%s" % (hparams.dev_prefix, hparams.tgt)
 
-    if hparams.sent_feature_file:
-        sent_feat_placeholder = inference.load_data(hparams.sent_feature_file)
+    if hparams.sent_feature_file_path:
+        dev_sent_feat_file = "%s/dev.sent_feature" % (hparams.sent_feature_file_path)
+        sent_feat_placeholder = inference.load_data(dev_sent_feat_file)
 
         dev_infer_iterator_feed_dict = {
             infer_model.src_placeholder: inference.load_data(dev_src_file),
@@ -336,11 +337,11 @@ def train(hparams, scope=None, target_session=""):
     # Preload data for sample decoding.
     dev_src_file = "%s.%s" % (hparams.dev_prefix, hparams.src)
     dev_tgt_file = "%s.%s" % (hparams.dev_prefix, hparams.tgt)
-    dev_sent_feat_file = hparams.sent_feature_file
+    dev_sent_feat_file = "%s/dev.sent_feature" % (hparams.sent_feature_file_path)
     sample_src_data = inference.load_data(dev_src_file)
     sample_tgt_data = inference.load_data(dev_tgt_file)
     sample_sent_feat_data = None
-    if hparams.sent_feature_file:
+    if hparams.sent_feature_file_path:
         sample_sent_feat_data = inference.load_data(dev_sent_feat_file)
 
     summary_name = "train_log"
@@ -548,7 +549,7 @@ def _sample_decode(model, global_step, sess, hparams, iterator, src_data,
     decode_id = random.randint(0, len(src_data) - 1)
     utils.print_out("  # %d" % decode_id)
 
-    if hparams.sent_feature_file:
+    if hparams.sent_feature_file_path:
         iterator_feed_dict = {
             iterator_src_placeholder: [src_data[decode_id]],
             iterator_batch_size_placeholder: 1,

@@ -71,7 +71,7 @@ class BaseModel(object):
         self.src_vocab_size = hparams.src_vocab_size
         self.tgt_vocab_size = hparams.tgt_vocab_size
         self.sent_feat_vocab_size = None
-        if hparams.sent_feature_file:
+        if hparams.sent_feature_file_path:
             self.sent_feat_vocab_size = hparams.sent_feat_vocab_size
 
         self.num_gpus = hparams.num_gpus
@@ -257,7 +257,7 @@ class BaseModel(object):
                 num_partitions=hparams.num_embeddings_partitions,
                 src_vocab_file=hparams.src_vocab_file,
                 tgt_vocab_file=hparams.tgt_vocab_file,
-                sent_feat_vocab_file=hparams.sent_feature_file,
+                sent_feat_vocab_file=hparams.sent_feature_file_path,
                 src_embed_file=hparams.src_embed_file,
                 tgt_embed_file=hparams.tgt_embed_file,
                 sent_feat_embed_file=hparams.sent_feat_embed_file,
@@ -567,11 +567,11 @@ class Model(BaseModel):
         iterator = self.iterator
 
         source = iterator.source
-        if hparams.sent_feature_file:
+        if hparams.sent_feature_file_path:
             sent_features = iterator.sent_features
         if self.time_major:
             source = tf.transpose(source)
-            if hparams.sent_feature_file:
+            if hparams.sent_feature_file_path:
                 sent_features = tf.transpose(sent_features)
 
         with tf.variable_scope("encoder") as scope:
@@ -579,7 +579,7 @@ class Model(BaseModel):
             # Look up embedding, emp_inp: [max_time, batch_size, num_units]
             encoder_emb_inp = tf.nn.embedding_lookup(
                 self.embedding_encoder, source)
-            if hparams.sent_feature_file:
+            if hparams.sent_feature_file_path:
                 encoder_sent_feat_inp = tf.nn.embedding_lookup(
                     self.sent_feat_embedding_encoder, sent_features)
                 concated_encoder_emb_inp = tf.concat([encoder_emb_inp, encoder_sent_feat_inp], 0)
