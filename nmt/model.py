@@ -209,7 +209,7 @@ class BaseModel(object):
 
     def _get_learning_rate_decay(self, hparams):
         """Get learning rate decay."""
-        if hparams.decay_scheme in ["luong5", "luong10", "luong234"]:
+        if hparams.decay_scheme in ["luong5", "luong10", "luong234"] or hparams.decay_scheme.startswith("early"):
             decay_factor = 0.5
             if hparams.decay_scheme == "luong5":
                 start_decay_step = int(hparams.num_train_steps / 2)
@@ -220,6 +220,9 @@ class BaseModel(object):
             elif hparams.decay_scheme == "luong234":
                 start_decay_step = int(hparams.num_train_steps * 2 / 3)
                 decay_times = 4
+            elif hparams.decay_scheme.startswith("early"):
+                start_decay_step = int(hparams.decay_scheme.split("early")[1])
+                decay_times = 10
             remain_steps = hparams.num_train_steps - start_decay_step
             decay_steps = int(remain_steps / decay_times)
         elif not hparams.decay_scheme:  # no decay
