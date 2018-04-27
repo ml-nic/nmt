@@ -58,10 +58,17 @@ def evaluate(ref_file, trans_file, metric, subword_option=None, question_file=No
             if "<var0>" in s:
                 var_queries = True
         if var_queries:
-            label_uri_file = "../../Data/SQA2018/dev.tok.sparql"
-            evaluation_score, len_questions, error_counter = _result_set_accuracy(question_file, label_uri_file,
-                                                                                  label_var_file=ref_file,
-                                                                                  pred_var_file=trans_file)
+            try:
+                label_uri_file = "../../Data/SQA2018/dev.tok.sparql.gt"
+                evaluation_score, len_questions, error_counter = _result_set_accuracy(question_file, label_uri_file,
+                                                                                      label_var_file=ref_file,
+                                                                                      pred_var_file=trans_file)
+            except ValueError as e:
+                label_uri_file = "../../Data/SQA2018/dev.tok.sparql"
+                evaluation_score, len_questions, error_counter = _result_set_accuracy(question_file, label_uri_file,
+                                                                                      label_var_file=ref_file,
+                                                                                      pred_var_file=trans_file)
+
             # label_uri_file, pred_uri_file=None, label_var_file=None, pred_var_file=None
         else:
             evaluation_score, len_questions, error_counter = _result_set_accuracy(question_file, ref_file, trans_file)
@@ -153,8 +160,8 @@ def _accuracy(label_file, pred_file):
                 label = re.sub(' +', ' ', label.strip())
                 pred = pred_fh.readline().strip()
                 pred = re.sub(' +', ' ', pred)
-                pred = our_utils.rep(generator_utils.decode(pred))
-                label = our_utils.rep(generator_utils.decode(label))
+                pred = our_utils.replace_count(our_utils.rep(generator_utils.decode(pred)))
+                label = our_utils.replace_count(our_utils.rep(generator_utils.decode(label)))
                 if our_utils.sparql_compare(label, pred):
                     match += 1.0
                 count += 1
@@ -192,10 +199,14 @@ def _result_set_accuracy(question_file, label_uri_file, pred_uri_file=None, labe
         _, _ = our_utils.fetch_results(question_file, label_uri_file, label_json_file, var_sparql_file=label_var_file)
         print("Fetched data for labels")
         first_fetch = False
+
     len_questions, error_counter = our_utils.fetch_results(question_file, pred_uri_file, pred_json_file,
                                                            var_sparql_file=pred_var_file)
     ground_truth = json.load(open(label_json_file))
     generated = json.load(open(pred_json_file))
+    print("##################")
+    print(len(generated["questions"]))
+    print(len(ground_truth["questions"]))
     for gen_question in generated["questions"]:
         gen_nl_question = gen_question["question"][0]["string"]
         for gt_question in ground_truth["questions"]:
@@ -205,6 +216,7 @@ def _result_set_accuracy(question_file, label_uri_file, pred_uri_file=None, labe
                 if same_answer is True:
                     match += 1
                 count += 1
+    print(match)
     return 100 * match / count, len_questions, error_counter
 
 
