@@ -173,8 +173,32 @@ class BaseModel(object):
             self.infer_summary = self._get_infer_summary(hparams)
 
         # Saver
-        self.saver = tf.train.Saver(
-            tf.global_variables(), max_to_keep=hparams.num_keep_ckpts)
+        if hparams.use_separate_savers:
+            enc_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                         scope="dynamic_seq2seq/encoder") + \
+                       tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                         scope="embeddings/encoder")
+            dec_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                         scope="dynamic_seq2seq/decoder") + \
+                       tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                         scope="embeddings/decoder")
+            self.enc_saver = tf.train.Saver(enc_vars, max_to_keep=hparams.num_keep_ckpts)
+            self.dec_saver = tf.train.Saver(dec_vars, max_to_keep=hparams.num_keep_ckpts)
+            c = []
+            d = enc_vars + dec_vars
+            for el in tf.global_variables():
+                if el not in d:
+                    c.append(el)
+            # Vermutlich sollten embeddings auch gespeichert werden, mal schauen ob gleich wie model oder extra, da man die ja evtl laden kann wenn file angegeben
+            # beide varianten probieren und wert anschauen ob gleich
+            """
+            'embeddings/encoder/embedding_encoder:0' shape = (2485, 128) dtype = float32_ref
+            'embeddings/decoder/embedding_decoder:0' shape = (1491, 128) dtype = float32_ref
+            'Variable:0' shape = () dtype = int32_ref
+            """
+            self.saver = tf.train.Saver(c, max_to_keep=hparams.num_keep_ckpts)
+        else:
+            self.saver = tf.train.Saver(tf.global_variables(), max_to_keep=hparams.num_keep_ckpts)
 
         # Print trainable variables
         utils.print_out("# Trainable variables")

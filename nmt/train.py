@@ -45,7 +45,7 @@ def run_sample_decode(infer_model, infer_sess, model_dir, hparams,
     """Sample decode a random sentence from src_data."""
     with infer_model.graph.as_default():
         loaded_infer_model, global_step = model_helper.create_or_load_model(
-            infer_model.model, model_dir, infer_sess, "infer")
+            infer_model.model, model_dir, infer_sess, "infer", use_separate_savers=hparams.use_separate_savers)
 
     _sample_decode(loaded_infer_model, global_step, infer_sess, hparams,
                    infer_model.iterator, src_data, tgt_data,
@@ -61,7 +61,7 @@ def run_internal_eval(
     """Compute internal evaluation (perplexity) for both dev / test."""
     with eval_model.graph.as_default():
         loaded_eval_model, global_step = model_helper.create_or_load_model(
-            eval_model.model, model_dir, eval_sess, "eval")
+            eval_model.model, model_dir, eval_sess, "eval", use_separate_savers=hparams.use_separate_savers)
 
     dev_src_file = "%s.%s" % (hparams.dev_prefix, hparams.src)
     dev_tgt_file = "%s.%s" % (hparams.dev_prefix, hparams.tgt)
@@ -110,7 +110,7 @@ def run_external_eval(infer_model, infer_sess, model_dir, hparams,
     """Compute external evaluation (bleu, rouge, etc.) for both dev / test."""
     with infer_model.graph.as_default():
         loaded_infer_model, global_step = model_helper.create_or_load_model(
-            infer_model.model, model_dir, infer_sess, "infer")
+            infer_model.model, model_dir, infer_sess, "infer", use_separate_savers=hparams.use_separate_savers)
 
     dev_src_file = "%s.%s" % (hparams.dev_prefix, hparams.src)
     dev_tgt_file = "%s.%s" % (hparams.dev_prefix, hparams.tgt)
@@ -179,7 +179,8 @@ def run_avg_external_eval(infer_model, infer_sess, model_dir, hparams,
         # Convert VariableName:0 to VariableName.
         global_step_name = infer_model.model.global_step.name.split(":")[0]
         avg_model_dir = model_helper.avg_checkpoints(
-            model_dir, hparams.num_keep_ckpts, global_step, global_step_name)
+            model_dir, hparams.num_keep_ckpts, global_step, global_step_name,
+            use_separate_savers=hparams.use_separate_savers)
 
         if avg_model_dir:
             avg_dev_scores, avg_test_scores, _ = run_external_eval(
@@ -366,7 +367,7 @@ def train(hparams, scope=None, target_session=""):
 
     with train_model.graph.as_default():
         loaded_train_model, global_step = model_helper.create_or_load_model(
-            train_model.model, model_dir, train_sess, "train")
+            train_model.model, model_dir, train_sess, "train", use_separate_savers=hparams.use_separate_savers)
 
     # Summary writer
     summary_writer = tf.summary.FileWriter(
@@ -437,10 +438,19 @@ def train(hparams, scope=None, target_session=""):
                               info["train_ppl"])
 
             # Save checkpoint
+            if hparams.use_separate_savers:
+                loaded_train_model.enc_saver.save(train_sess,
+                                                  os.path.join(out_dir, "enc_translate.ckpt"),
+                                                  global_step=global_step)
+                loaded_train_model.dec_saver.save(train_sess,
+                                                  os.path.join(out_dir, "dec_translate.ckpt"),
+                                                  global_step=global_step)
+
             loaded_train_model.saver.save(
                 train_sess,
                 os.path.join(out_dir, "translate.ckpt"),
                 global_step=global_step)
+
 
             # Evaluate on dev/test
             run_sample_decode(infer_model, infer_sess,
@@ -453,10 +463,21 @@ def train(hparams, scope=None, target_session=""):
             last_external_eval_step = global_step
 
             # Save checkpoint
+            if hparams.use_separate_savers:
+                loaded_train_model.enc_saver.save(
+                    train_sess,
+                    os.path.join(out_dir, "enc_translate.ckpt"),
+                    global_step=global_step)
+                loaded_train_model.dec_saver.save(
+                    train_sess,
+                    os.path.join(out_dir, "dec_translate.ckpt"),
+                    global_step=global_step)
+
             loaded_train_model.saver.save(
                 train_sess,
                 os.path.join(out_dir, "translate.ckpt"),
                 global_step=global_step)
+
             run_sample_decode(infer_model, infer_sess,
                               model_dir, hparams, summary_writer, sample_src_data,
                               sample_tgt_data, sample_sent_feat_data)
@@ -469,6 +490,16 @@ def train(hparams, scope=None, target_session=""):
                                       summary_writer, global_step)
 
     # Done training
+    if hparams.use_separate_savers:
+        loaded_train_model.enc_saver.save(
+            train_sess,
+            os.path.join(out_dir, "enc_translate.ckpt"),
+            global_step=global_step)
+        loaded_train_model.dec_saver.save(
+            train_sess,
+            os.path.join(out_dir, "dec_translate.ckpt"),
+            global_step=global_step)
+
     loaded_train_model.saver.save(
         train_sess,
         os.path.join(out_dir, "translate.ckpt"),
@@ -630,6 +661,18 @@ def _external_eval(model, global_step, sess, hparams, iterator,
             if save_on_best and scores[metric] > getattr(hparams, best_metric_label):
                 try:
                     setattr(hparams, best_metric_label, scores[metric])
+                    if hparams.use_separate_savers:
+                        model.enc_saver.save(
+                            sess,
+                            os.path.join(
+                                getattr(hparams, best_metric_label + "_dir"), "enc_translate.ckpt"),
+                            global_step=model.global_step)
+                        model.dec_saver.save(
+                            sess,
+                            os.path.join(
+                                getattr(hparams, best_metric_label + "_dir"), "dec_translate.ckpt"),
+                            global_step=model.global_step)
+
                     model.saver.save(
                         sess,
                         os.path.join(

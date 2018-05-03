@@ -50,7 +50,14 @@ class InferenceTest(tf.test.TestCase):
     infer_model = model_helper.create_infer_model(model_creator, hparams)
     with self.test_session(graph=infer_model.graph) as sess:
       loaded_model, global_step = model_helper.create_or_load_model(
-          infer_model.model, out_dir, sess, "infer_name")
+          infer_model.model, out_dir, sess, "infer_name", use_separate_savers=hparams.use_separate_savers)
+      if hparams.use_separate_savers:
+          enc_ckpt = loaded_model.enc_saver.save(
+              sess, os.path.join(out_dir, "enc_translate.ckpt"),
+              global_step=global_step)
+          dec_ckpt = loaded_model.dec_saver.save(
+              sess, os.path.join(out_dir, "dec_translate.ckpt"),
+              global_step=global_step)
       ckpt = loaded_model.saver.save(
           sess, os.path.join(out_dir, "translate.ckpt"),
           global_step=global_step)

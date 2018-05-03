@@ -133,7 +133,7 @@ def single_worker_inference(infer_model,
     with tf.Session(
             graph=infer_model.graph, config=utils.get_config_proto()) as sess:
         loaded_infer_model = model_helper.load_model(
-            infer_model.model, ckpt, sess, "infer")
+            infer_model.model, ckpt, sess, "infer", use_separate_savers=hparams.use_separate_savers)
         sess.run(
             infer_model.iterator.initializer,
             feed_dict={
@@ -193,7 +193,7 @@ def multi_worker_inference(infer_model,
     with tf.Session(
             graph=infer_model.graph, config=utils.get_config_proto()) as sess:
         loaded_infer_model = model_helper.load_model(
-            infer_model.model, ckpt, sess, "infer")
+            infer_model.model, ckpt, sess, "infer", use_separate_savers=hparams.use_separate_savers)
         sess.run(infer_model.iterator.initializer,
                  {
                      infer_model.src_placeholder: infer_data,

@@ -534,18 +534,57 @@ def gradient_clip(gradients, max_gradient_norm):
     return clipped_gradients, gradient_norm_summary, gradient_norm
 
 
-def load_model(model, ckpt, session, name):
+def load_model(model, ckpt, session, name, use_separate_savers=None):
     start_time = time.time()
-    model.saver.restore(session, ckpt)
+    if "dec_" in ckpt:
+        enc_ckpt = ckpt.split("dec")[0] + "enc" + ckpt.split("dec")[1]
+        dec_ckpt = ckpt
+        normal_ckpt = ckpt.split("dec_")[0] + ckpt.split("dec_")[1]
+    elif "enc_" in ckpt:
+        enc_ckpt = ckpt
+        dec_ckpt = ckpt.split("enc")[0] + "dec" + ckpt.split("enc")[1]
+        normal_ckpt = ckpt.split("enc")[0] + ckpt.split("enc")[1]
+    else:
+        enc_ckpt = ckpt.split("translate.ckpt")[0] + "enc_translate.ckpt" + ckpt.split("translate.ckpt")[1]
+        dec_ckpt = ckpt.split("translate.ckpt")[0] + "dec_translate.ckpt" + ckpt.split("translate.ckpt")[1]
+        normal_ckpt = ckpt
+    """
+    print("###")
+    print(enc_ckpt)
+    print(dec_ckpt)
+    print(normal_ckpt)
+    enc_ckpt = "../../Data/SQA2018/pretrain_test_model/enc_translate.ckpt-XXX"
+    dec_ckpt = "../../Data/SQA2018/pretrain_test_model/dec_translate.ckpt-YYY"
+    normal_ckpt = "../../Data/SQA2018/pretrain_test_model/translate.ckpt-ZZZ"
+    print("###")
+    print(enc_ckpt)
+    print(dec_ckpt)
+    print(normal_ckpt)
+    """
+    if use_separate_savers:
+        model.enc_saver.restore(session, enc_ckpt)
+        model.dec_saver.restore(session, dec_ckpt)
+    model.saver.restore(session, normal_ckpt)
+
     session.run(tf.tables_initializer())
     utils.print_out(
         "  loaded %s model parameters from %s, time %.2fs" %
         (name, ckpt, time.time() - start_time))
+
+    """
+    for v in tf.trainable_variables():
+        if v.name == "embeddings/encoder/embedding_encoder:0":
+            print(v.name)
+            print(v.__dict__)
+            print(session.run(v))
+            exit()
+    exit()
+    """
     return model
 
 
 def avg_checkpoints(model_dir, num_last_checkpoints, global_step,
-                    global_step_name):
+                    global_step_name, use_separate_savers=None):
     """Average the last N checkpoints in the model_dir."""
     checkpoint_state = tf.train.get_checkpoint_state(model_dir)
     if not checkpoint_state:
@@ -600,7 +639,28 @@ def avg_checkpoints(model_dir, num_last_checkpoints, global_step,
         assign_ops = [tf.assign(v, p) for (v, p) in zip(tf_vars, placeholders)]
         global_step_var = tf.Variable(
             global_step, name=global_step_name, trainable=False)
-        saver = tf.train.Saver(tf.all_variables())
+
+        if use_separate_savers:
+            enc_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                         scope="dynamic_seq2seq/encoder") + \
+                       tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                         scope="embeddings/encoder")
+            dec_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                         scope="dynamic_seq2seq/decoder") + \
+                       tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                         scope="embeddings/decoder")
+            enc_saver = tf.train.Saver(enc_vars)
+            dec_saver = tf.train.Saver(dec_vars)
+            c = []
+            d = enc_vars + dec_vars
+            for el in tf.global_variables():
+                if el not in d:
+                    c.append(el)
+            print("enc_vars,dec_vars,c,d", len(enc_vars), len(dec_vars), len(c), len(d))
+
+            saver = tf.train.Saver(c)
+        else:
+            saver = tf.train.Saver(tf.all_variables())
 
         with tf.Session() as sess:
             sess.run(tf.initialize_all_variables())
@@ -610,6 +670,14 @@ def avg_checkpoints(model_dir, num_last_checkpoints, global_step,
 
             # Use the built saver to save the averaged checkpoint. Only keep 1
             # checkpoint and the best checkpoint will be moved to avg_best_metric_dir.
+            if use_separate_savers:
+                enc_saver.save(
+                    sess,
+                    os.path.join(avg_model_dir, "enc_translate.ckpt"))
+                dec_saver.save(
+                    sess,
+                    os.path.join(avg_model_dir, "dec_translate.ckpt"))
+
             saver.save(
                 sess,
                 os.path.join(avg_model_dir, "translate.ckpt"))
@@ -617,11 +685,11 @@ def avg_checkpoints(model_dir, num_last_checkpoints, global_step,
     return avg_model_dir
 
 
-def create_or_load_model(model, model_dir, session, name):
+def create_or_load_model(model, model_dir, session, name, use_separate_savers=None):
     """Create translation model and initialize or load parameters in session."""
     latest_ckpt = tf.train.latest_checkpoint(model_dir)
     if latest_ckpt:
-        model = load_model(model, latest_ckpt, session, name)
+        model = load_model(model, latest_ckpt, session, name, use_separate_savers=use_separate_savers)
     else:
         start_time = time.time()
         session.run(tf.global_variables_initializer())

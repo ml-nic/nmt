@@ -597,6 +597,7 @@ def run_main(flags, default_hparams, train_fn, inference_fn, target_session=""):
     hparams = create_or_load_hparams(
         out_dir, default_hparams, flags.hparams_path, save_hparams=(jobid == 0))
 
+    hparams.use_separate_savers = False
     if flags.inference_input_file:
         # Inference indices
         hparams.inference_indices = None
