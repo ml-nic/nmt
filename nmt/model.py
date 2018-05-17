@@ -244,6 +244,12 @@ class BaseModel(object):
             elif hparams.decay_scheme == "luong234":
                 start_decay_step = int(hparams.num_train_steps * 2 / 3)
                 decay_times = 4
+            elif hparams.decay_scheme.startswith("earlya2a"):
+                start_decay_step = int(hparams.decay_scheme.split("earlya2a")[1])
+                decay_times = 20
+            elif hparams.decay_scheme.startswith("earlya3a"):
+                start_decay_step = int(hparams.decay_scheme.split("earlya3a")[1])
+                decay_times = 5
             elif hparams.decay_scheme.startswith("early"):
                 start_decay_step = int(hparams.decay_scheme.split("early")[1])
                 decay_times = 10
