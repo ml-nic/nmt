@@ -169,12 +169,18 @@ def _accuracy(label_file, pred_file):
 
 
 # def _result_set_accuracy(question_file, label_file, pred_file):
-def _result_set_accuracy(question_file, label_uri_file, pred_uri_file=None, label_var_file=None, pred_var_file=None):
+def _result_set_accuracy(question_file, label_uri_file, pred_uri_file=None, label_var_file=None, pred_var_file=None,
+                         run_id=None):
     """
     Compute accuracy, each line contains a label.
     Overwritten to handle accuracy of SPARQL Queries, see func: old_accuracy, for the old version
     """
-    global first_fetch
+    global first_fetch, model_id
+    if model_id == "":
+        if run_id is None:
+            raise ValueError("model_id can't be empty")
+        else:
+            model_id = run_id
     label_json_file = "tmp/label_{}.json".format(model_id)
     pred_json_file = "tmp/pred_{}.json".format(model_id)
     count = 0
