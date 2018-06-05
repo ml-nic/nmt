@@ -27,7 +27,7 @@ from ..scripts import rouge
 import sys
 
 sys.path.append("../")
-import utils as our_utils
+from utilities import utils as our_utils
 import Preprocessing.generator_utils as generator_utils
 
 __all__ = ["evaluate"]
