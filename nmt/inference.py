@@ -84,6 +84,7 @@ def inference(ckpt,
               inference_input_file,
               inference_output_file,
               hparams,
+              interactive_inference,
               num_workers=1,
               jobid=0,
               scope=None):
@@ -102,12 +103,15 @@ def inference(ckpt,
     infer_model = model_helper.create_infer_model(model_creator, hparams, scope)
 
     if num_workers == 1:
-        single_worker_inference(
-            infer_model,
-            ckpt,
-            inference_input_file,
-            inference_output_file,
-            hparams)
+        if interactive_inference:
+            return single_worker_inference, infer_model, ckpt, inference_input_file, inference_output_file, hparams, interactive_inference
+        else:
+            single_worker_inference(
+                infer_model,
+                ckpt,
+                inference_input_file,
+                inference_output_file,
+                hparams, interactive_inference)
     else:
         multi_worker_inference(
             infer_model,
@@ -123,12 +127,14 @@ def single_worker_inference(infer_model,
                             ckpt,
                             inference_input_file,
                             inference_output_file,
-                            hparams):
+                            hparams, interactive_inference):
     """Inference with a single worker."""
     output_infer = inference_output_file
-
-    # Read data
-    infer_data = load_data(inference_input_file, hparams)
+    if not interactive_inference:
+        # Read data
+        infer_data = load_data(inference_input_file, hparams)
+    else:
+        infer_data = [inference_input_file]
 
     with tf.Session(
             graph=infer_model.graph, config=utils.get_config_proto()) as sess:

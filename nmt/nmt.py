@@ -568,14 +568,26 @@ def create_or_load_hparams(
     if save_hparams:
         utils.save_hparams(out_dir, hparams)
         for metric in hparams.metrics:
-            utils.save_hparams(getattr(hparams, "best_" + metric + "_dir"), hparams)
+            try:
+                utils.save_hparams(getattr(hparams, "best_" + metric + "_dir"), hparams)
+            except Exception as e:
+                path = getattr(hparams, "best_" + metric + "_dir")
+                hparams.best_accuracy_dir = hparams.best_accuracy_dir[3:]
+                hparams.best_bleu_dir = hparams.best_bleu_dir[3:]
+                hparams.best_old_accuracy_dir = hparams.best_old_accuracy_dir[3:]
+                hparams.out_dir = hparams.out_dir[3:]
+                hparams.src_vocab_file = hparams.src_vocab_file[3:]
+                hparams.tgt_vocab_file = hparams.tgt_vocab_file[3:]
+                hparams.vocab_prefix = hparams.vocab_prefix[3:]
+                utils.save_hparams(path[3:], hparams)
+
 
     # Print HParams
     utils.print_hparams(hparams)
     return hparams
 
 
-def run_main(flags, default_hparams, train_fn, inference_fn, target_session=""):
+def run_main(flags, default_hparams, train_fn, inference_fn, target_session="", interactive_inference=None):
     """Run main."""
     # Job
     jobid = flags.jobid
@@ -597,8 +609,13 @@ def run_main(flags, default_hparams, train_fn, inference_fn, target_session=""):
     hparams = create_or_load_hparams(
         out_dir, default_hparams, flags.hparams_path, save_hparams=(jobid == 0))
 
+
     hparams.use_separate_savers = False
     if flags.inference_input_file:
+        interactive = False
+        if interactive_inference:
+            interactive = True
+
         # Inference indices
         hparams.inference_indices = None
         if flags.inference_list:
@@ -610,8 +627,16 @@ def run_main(flags, default_hparams, train_fn, inference_fn, target_session=""):
         ckpt = flags.ckpt
         if not ckpt:
             ckpt = tf.train.latest_checkpoint(out_dir)
-        inference_fn(ckpt, flags.inference_input_file,
-                     trans_file, hparams, num_workers, jobid)
+        if interactive:
+            single_worker_inference, infer_model, chkpt, inference_input_file, inference_output_file, hparams, interactive_inference = inference_fn(
+                ckpt, flags.inference_input_file,
+                trans_file, hparams, interactive, num_workers, jobid)
+        else:
+            inference_fn(ckpt, flags.inference_input_file,
+                         trans_file, hparams, interactive, num_workers, jobid)
+
+        if single_worker_inference is not None:
+            return single_worker_inference, infer_model, chkpt, inference_input_file, inference_output_file, hparams, interactive_inference
 
         # Evaluation
         ref_file = flags.inference_ref_file
@@ -650,3 +675,43 @@ if __name__ == "__main__":
     add_arguments(nmt_parser)
     FLAGS, unparsed = nmt_parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+
+
+class NL2SPARQL:
+    def __init__(self, ckpt, hparams_path, out_dir, vocab_prefix, inference_input_file, inference_output_file,
+                 inference_ref_file, model_id):
+        print(sys.argv)
+        new_args = [
+            "--src", "en",
+            "--tgt", "sparql",
+            "--ckpt", ckpt,
+            "--hparams_path", hparams_path,
+            "--out_dir", out_dir,
+            "--vocab_prefix", vocab_prefix,
+            "--inference_input_file", inference_input_file,
+            "--inference_output_file", inference_output_file,
+            "--inference_ref_file", inference_ref_file,
+            "--model_id", model_id
+        ]
+        sys.argv += new_args
+
+        nmt_parser = argparse.ArgumentParser()
+        add_arguments(nmt_parser)
+
+        FLAGS, unparsed = nmt_parser.parse_known_args()
+        # tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+        default_hparams = create_hparams(FLAGS)
+
+        train_fn = train.train
+        inference_fn = inference.inference
+        self.single_worker_inference, self.infer_model, self.chkpt, self.inference_input_file, self.inference_output_file, self.hparams, self.interactive_inference = run_main(
+            FLAGS, default_hparams, train_fn, inference_fn, False, interactive_inference=True)
+        print(self.hparams)
+
+    def predict_one_sentence(self, sentence):
+        self.single_worker_inference(
+            self.infer_model,
+            self.chkpt,
+            sentence,
+            self.inference_output_file,
+            self.hparams, True)
